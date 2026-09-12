@@ -8,9 +8,12 @@ import java.net.http.HttpResponse
 import java.time.Instant
 
 class ChessComClient(
-    private val httpClient: HttpClient = HttpClient.newBuilder().build()
+    private val httpClient: HttpClient = HttpClient.newBuilder().build(),
 ) {
-    fun recentGames(username: String, months: Int = 3): List<Game> {
+    fun recentGames(
+        username: String,
+        months: Int = 3,
+    ): List<Game> {
         require(username.matches(Regex("[A-Za-z0-9_-]{3,64}"))) {
             "Invalid Chess.com username"
         }
@@ -24,8 +27,9 @@ class ChessComClient(
 
         println("[chess.com] username=$username archives=${archives.size}")
         return archives.flatMap { archiveUrl ->
-            val games = getJsonObject(archiveUrl).getJsonArray("games")
-                ?: error("Chess.com archive response did not contain a games array: $archiveUrl")
+            val games =
+                getJsonObject(archiveUrl).getJsonArray("games")
+                    ?: error("Chess.com archive response did not contain a games array: $archiveUrl")
             println("[chess.com] username=$username archive=$archiveUrl games=${games.size()}")
             games.mapNotNull { value ->
                 val game = value as? io.vertx.core.json.JsonObject
@@ -39,7 +43,10 @@ class ChessComClient(
         }
     }
 
-    private fun parseGame(json: io.vertx.core.json.JsonObject, username: String): Game? {
+    private fun parseGame(
+        json: io.vertx.core.json.JsonObject,
+        username: String,
+    ): Game? {
         val id = json.getString("url") ?: return null
         val pgn = json.getString("pgn") ?: return null
         val white = json.getJsonObject("white") ?: return null
@@ -61,19 +68,22 @@ class ChessComClient(
             timeClass = json.getString("time_class", "unknown"),
             openingEco = normalizeEco(json.getString("eco")),
             termination = json.getString("termination", "unknown"),
-            endTime = Instant.ofEpochSecond(endTime).toString()
+            endTime = Instant.ofEpochSecond(endTime).toString(),
         )
     }
 
     private fun getJsonObject(url: String): io.vertx.core.json.JsonObject =
-        io.vertx.core.json.JsonObject(get(url))
+        io.vertx.core.json
+            .JsonObject(get(url))
 
     private fun get(url: String): String {
-        val request = HttpRequest.newBuilder(URI.create(url))
-            .header("User-Agent", "ChessCoachBackend/1.0 (game analysis service)")
-            .header("Accept", "application/json")
-            .GET()
-            .build()
+        val request =
+            HttpRequest
+                .newBuilder(URI.create(url))
+                .header("User-Agent", "ChessCoachBackend/1.0 (game analysis service)")
+                .header("Accept", "application/json")
+                .GET()
+                .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         check(response.statusCode() in 200..299) {
             "Chess.com returned HTTP ${response.statusCode()} for $url: ${response.body().take(300)}"

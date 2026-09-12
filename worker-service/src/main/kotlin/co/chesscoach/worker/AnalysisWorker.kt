@@ -8,13 +8,14 @@ import messaging.AnalysisTier
 
 class AnalysisWorker(
     private val engine: ChessEngine,
-    private val config: StockfishConfig
+    private val config: StockfishConfig,
 ) {
     fun analyze(job: AnalysisJob): EngineAnalysis {
-        val depth = when (job.tier) {
-            AnalysisTier.FAST -> config.fastDepth
-            AnalysisTier.DEEP -> config.deepDepth
-        }
+        val depth =
+            when (job.tier) {
+                AnalysisTier.FAST -> config.fastDepth
+                AnalysisTier.DEEP -> config.deepDepth
+            }
         return engine.analyze(job.fen, depth)
     }
 }

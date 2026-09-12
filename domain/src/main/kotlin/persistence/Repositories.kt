@@ -11,13 +11,13 @@ import domain.PuzzleRepository
 import domain.UserAccount
 import domain.UserRepository
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
-import schema.Games
 import schema.ChessAccounts
+import schema.Games
 import schema.MoveEvaluations
 import schema.Puzzles
 import schema.Users
@@ -36,7 +36,7 @@ class ExposedGameRepository : GameRepository {
                     .where { Games.id like "%/$id" }
                     .limit(1)
                     .singleOrNull()
-                ?.toGame()
+                    ?.toGame()
         }
 
     override fun list(
@@ -69,7 +69,8 @@ class ExposedGameRepository : GameRepository {
 class ExposedChessAccountRepository : ChessAccountRepository {
     override fun findByUserId(userId: String) =
         transaction {
-            ChessAccounts.selectAll()
+            ChessAccounts
+                .selectAll()
                 .where { ChessAccounts.userId eq java.util.UUID.fromString(userId) }
                 .singleOrNull()
                 ?.let {
@@ -77,7 +78,7 @@ class ExposedChessAccountRepository : ChessAccountRepository {
                         id = it[ChessAccounts.id].value.toString(),
                         userId = it[ChessAccounts.userId].value.toString(),
                         username = it[ChessAccounts.chessComUserName],
-                        verified = it[ChessAccounts.verified]
+                        verified = it[ChessAccounts.verified],
                     )
                 }
         }

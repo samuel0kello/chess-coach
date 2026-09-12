@@ -8,10 +8,12 @@ import java.io.OutputStreamWriter
 import java.util.concurrent.TimeUnit
 
 class StockfishEngine(
-    private val config: StockfishConfig
-) : ChessEngine, Closeable {
-    private val process = ProcessBuilder(config.executable)
-        .start()
+    private val config: StockfishConfig,
+) : ChessEngine,
+    Closeable {
+    private val process =
+        ProcessBuilder(config.executable)
+            .start()
     private val input = BufferedReader(InputStreamReader(process.inputStream))
     private val output = BufferedWriter(OutputStreamWriter(process.outputStream))
     private val errorReader = BufferedReader(InputStreamReader(process.errorStream))
@@ -34,7 +36,10 @@ class StockfishEngine(
     }
 
     @Synchronized
-    override fun analyze(fen: String, depth: Int): EngineAnalysis {
+    override fun analyze(
+        fen: String,
+        depth: Int,
+    ): EngineAnalysis {
         require(fen.isNotBlank()) { "FEN must not be blank" }
         require(depth > 0) { "Analysis depth must be greater than zero" }
 
@@ -49,9 +54,15 @@ class StockfishEngine(
             val line = readLine()
             when {
                 line == "bestmove" || line.startsWith("bestmove ") -> {
-                    bestMove = line.removePrefix("bestmove").trim().split(' ').firstOrNull()
+                    bestMove =
+                        line
+                            .removePrefix("bestmove")
+                            .trim()
+                            .split(' ')
+                            .firstOrNull()
                     break
                 }
+
                 line.startsWith("info ") -> {
                     UciParser.parseScore(line)?.let { score = it }
                     UciParser.parsePrincipalVariation(line)?.let { principalVariation = it }
@@ -62,7 +73,7 @@ class StockfishEngine(
         return EngineAnalysis(
             bestMove = requireNotNull(bestMove) { "Stockfish returned no best move" },
             score = score,
-            principalVariation = principalVariation
+            principalVariation = principalVariation,
         )
     }
 
@@ -89,9 +100,7 @@ class StockfishEngine(
         }
     }
 
-    private fun readLine(): String =
-        input.readLine() ?: error("Stockfish exited unexpectedly")
-
+    private fun readLine(): String = input.readLine() ?: error("Stockfish exited unexpectedly")
 }
 
 object UciParser {

@@ -6,10 +6,11 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 
-private val pollerModule = module {
-    single<AnalysisJobPublisher> { LoggingAnalysisJobPublisher() }
-    single<PgnProviderClient> { ConfigurablePgnProviderClient() }
-}
+private val pollerModule =
+    module {
+        single<AnalysisJobPublisher> { LoggingAnalysisJobPublisher() }
+        single<PgnProviderClient> { ConfigurablePgnProviderClient() }
+    }
 
 fun main() {
     startKoin {

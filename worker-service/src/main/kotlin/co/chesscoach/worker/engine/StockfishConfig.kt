@@ -5,7 +5,7 @@ data class StockfishConfig(
     val fastDepth: Int = environmentInt("STOCKFISH_FAST_DEPTH", 12),
     val deepDepth: Int = environmentInt("STOCKFISH_DEEP_DEPTH", 20),
     val threads: Int = environmentInt("STOCKFISH_THREADS", 1),
-    val hashMb: Int = environmentInt("STOCKFISH_HASH_MB", 128)
+    val hashMb: Int = environmentInt("STOCKFISH_HASH_MB", 128),
 ) {
     init {
         require(fastDepth > 0) { "STOCKFISH_FAST_DEPTH must be greater than zero" }
@@ -17,5 +17,7 @@ data class StockfishConfig(
     }
 }
 
-private fun environmentInt(name: String, default: Int): Int =
-    System.getenv(name)?.toIntOrNull() ?: default
+private fun environmentInt(
+    name: String,
+    default: Int,
+): Int = System.getenv(name)?.toIntOrNull() ?: default

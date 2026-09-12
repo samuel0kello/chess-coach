@@ -26,17 +26,18 @@ class RabbitAnalysisJobPublisher(
                 this.password = password
                 this.connectionTimeout = 10_000
             }.newConnection()
-    private val channel = connection.createChannel().apply {
-        queueDeclare(queue, true, false, false, null)
-    }.also {
-        println("[rabbitmq] connected host=$host port=$port queue=$queue")
-    }
+    private val channel =
+        connection
+            .createChannel()
+            .apply {
+                queueDeclare(queue, true, false, false, null)
+            }.also {
+                println("[rabbitmq] connected host=$host port=$port queue=$queue")
+            }
 
-    override suspend fun publishFastAnalysis(gameId: String) =
-        publish(gameId, INITIAL_POSITION_FEN, AnalysisTier.FAST)
+    override suspend fun publishFastAnalysis(gameId: String) = publish(gameId, INITIAL_POSITION_FEN, AnalysisTier.FAST)
 
-    override suspend fun publishDeepAnalysis(gameId: String) =
-        publish(gameId, INITIAL_POSITION_FEN, AnalysisTier.DEEP)
+    override suspend fun publishDeepAnalysis(gameId: String) = publish(gameId, INITIAL_POSITION_FEN, AnalysisTier.DEEP)
 
     private fun publish(
         gameId: String,

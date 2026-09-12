@@ -3,13 +3,26 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/buildLogic" name="buildLogic">
+                <projects>
+                  <project path="$PROJECT_DIR$/buildLogic" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/api-service" />
+            <option value="$PROJECT_DIR$/buildLogic" />
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/poller-service" />
+            <option value="$PROJECT_DIR$/worker-service" />
           </set>
         </option>
         <option name="myGradleHome" value="" />

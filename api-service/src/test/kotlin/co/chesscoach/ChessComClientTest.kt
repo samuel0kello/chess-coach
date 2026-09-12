@@ -9,7 +9,7 @@ class ChessComClientTest {
     fun `normalizes Chesscom ECO URL to opening code`() {
         assertEquals(
             "Caro-Kann-Defense-2.Nf3-d5-3.exd5-cxd5",
-            normalizeEco("https://www.chess.com/openings/Caro-Kann-Defense-2.Nf3-d5-3.exd5-cxd5")
+            normalizeEco("https://www.chess.com/openings/Caro-Kann-Defense-2.Nf3-d5-3.exd5-cxd5"),
         )
     }
 

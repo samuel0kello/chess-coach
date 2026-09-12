@@ -5,7 +5,7 @@ data class ApiConfig(
     val host: String = env("API_HOST", "0.0.0.0"),
     val port: Int = env("API_PORT", "8080").toIntOrNull() ?: 8080,
     val jwtSecret: String = env("JWT_SECRET", "local-development-secret"),
-    val jwtExpiryMinutes: Int = env("JWT_EXPIRY_MINUTES", "60").toIntOrNull() ?: 60
+    val jwtExpiryMinutes: Int = env("JWT_EXPIRY_MINUTES", "60").toIntOrNull() ?: 60,
 ) {
     init {
         require(port in 1..65535) { "API_PORT must be between 1 and 65535" }
@@ -17,4 +17,7 @@ data class ApiConfig(
     }
 }
 
-private fun env(name: String, default: String) = System.getenv(name) ?: default
+private fun env(
+    name: String,
+    default: String,
+) = System.getenv(name) ?: default

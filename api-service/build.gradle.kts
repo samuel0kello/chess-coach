@@ -14,20 +14,22 @@ tasks.named<JavaExec>("run") {
     environment("APP_ENV", providers.environmentVariable("APP_ENV").orElse("dev").get())
     environment(
         "DATABASE_URL",
-        providers.environmentVariable("DATABASE_URL")
+        providers
+            .environmentVariable("DATABASE_URL")
             .orElse("jdbc:postgresql://localhost:5432/chesscoach")
-            .get()
+            .get(),
     )
     environment("DATABASE_USER", providers.environmentVariable("DATABASE_USER").orElse("chesscoach").get())
     environment(
         "DATABASE_PASSWORD",
-        providers.environmentVariable("DATABASE_PASSWORD").orElse("chesscoach-dev-password").get()
+        providers.environmentVariable("DATABASE_PASSWORD").orElse("chesscoach-dev-password").get(),
     )
     environment(
         "JWT_SECRET",
-        providers.environmentVariable("JWT_SECRET")
+        providers
+            .environmentVariable("JWT_SECRET")
             .orElse("chesscoach-development-jwt-secret-change-for-production")
-            .get()
+            .get(),
     )
     environment("RABBITMQ_HOST", providers.environmentVariable("RABBITMQ_HOST").orElse("localhost").get())
     environment("RABBITMQ_PORT", providers.environmentVariable("RABBITMQ_PORT").orElse("5672").get())

@@ -6,11 +6,11 @@ import kotlinx.serialization.Serializable
 data class AnalysisJob(
     val gameId: String,
     val fen: String,
-    val tier: AnalysisTier
+    val tier: AnalysisTier,
 )
 
 @Serializable
 enum class AnalysisTier {
     FAST,
-    DEEP
+    DEEP,
 }
