@@ -1,0 +1,16 @@
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+    restart: unless-stopped
+  rabbitmq:
+    extends:
+      file: docker-compose.yml
+      service: rabbitmq
+    restart: unless-stopped
+  worker:
+    extends:
+      file: docker-compose.yml
+      service: worker
+    restart: unless-stopped

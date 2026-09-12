@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "Chess Coach API",
+    "_postman_id": "b1f4f3d8-8a7c-4b77-9b2c-4d38e3b42d10",
+    "description": "Local API collection for authentication, Chess.com game sync, game retrieval, analysis lookup, and puzzles.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080"},
+    {"key": "email", "value": "user@example.com"},
+    {"key": "password", "value": "change-me-123"},
+    {"key": "chessComUsername", "value": "your-chess-com-username"},
+    {"key": "gameId", "value": "170979798774"},
+    {"key": "gameUrl", "value": "https://www.chess.com/game/live/170979798774"},
+    {"key": "token", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": "{{baseUrl}}/auth/register"
+      }
+    },
+    {
+      "name": "Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "if (body.token) pm.collectionVariables.set('token', body.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": "{{baseUrl}}/auth/token"
+      }
+    },
+    {
+      "name": "Sync Chess.com games",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"{{chessComUsername}}\"}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": "{{baseUrl}}/games/sync"
+      }
+    },
+    {
+      "name": "List games",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/games"
+      }
+    },
+    {
+      "name": "Get game by ID",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/games/{{gameId}}"
+      }
+    },
+    {
+      "name": "Get game by Chess.com URL",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/games/by-url?url={{gameUrl}}"
+      }
+    },
+    {
+      "name": "Get game analysis",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/analysis/{{gameId}}"
+      }
+    },
+    {
+      "name": "Queue fast game review",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"tier\":\"FAST\"}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": "{{baseUrl}}/analysis/{{gameId}}"
+      }
+    },
+    {
+      "name": "Queue deep game review",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"tier\":\"DEEP\"}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": "{{baseUrl}}/analysis/{{gameId}}"
+      }
+    },
+    {
+      "name": "List puzzles",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/puzzles"
+      }
+    }
+  ]
+}

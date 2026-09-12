@@ -1,0 +1,20 @@
+Stockfish is distributed under the GNU General Public License version 3.
+
+The worker image contains:
+
+- The Stockfish executable at `/opt/stockfish/stockfish`.
+- The corresponding pinned source archive at
+  `/usr/share/doc/stockfish/stockfish-source.tar.gz`.
+- The Stockfish license at `/usr/share/doc/stockfish/Copying.txt`.
+
+The image build obtains the source archive from the official Stockfish
+repository. The URL and SHA-256 digest are supplied through
+`STOCKFISH_SOURCE_URL` and `STOCKFISH_SOURCE_SHA256` build arguments.
+
+Official source repository:
+
+https://github.com/official-stockfish/Stockfish
+
+Official license:
+
+https://github.com/official-stockfish/Stockfish/blob/master/Copying.txt

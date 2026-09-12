@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["dev", "prod"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chesscoach}
+      POSTGRES_USER: ${POSTGRES_USER:-chesscoach}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chesscoach-dev-password}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles: ["dev", "prod"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-chesscoach}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq-dev-password}
+      RABBITMQ_NODE_IP_ADDRESS: 0.0.0.0
+    ports: ["${RABBITMQ_PORT:-5672}:5672", "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    build:
+      context: .
+      dockerfile: worker-service/Dockerfile
+      args:
+        STOCKFISH_SOURCE_URL: ${STOCKFISH_SOURCE_URL:-https://github.com/official-stockfish/Stockfish/archive/refs/tags/sf_17.1.tar.gz}
+        STOCKFISH_SOURCE_SHA256: ${STOCKFISH_SOURCE_SHA256:-0cfd9396438798cc68f5c0d5fa0bb458bb8ffff7de06add841aaeace86bec1f1}
+    profiles: ["dev", "prod"]
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chesscoach}
+      DATABASE_USER: ${POSTGRES_USER:-chesscoach}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chesscoach-dev-password}
+      RABBITMQ_HOST: ${RABBITMQ_WORKER_HOST:-rabbitmq}
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-chesscoach}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-rabbitmq-dev-password}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-analysis.jobs}
+      STOCKFISH_PATH: /opt/stockfish/stockfish
+      STOCKFISH_FAST_DEPTH: ${STOCKFISH_FAST_DEPTH:-12}
+      STOCKFISH_DEEP_DEPTH: ${STOCKFISH_DEEP_DEPTH:-20}
+      STOCKFISH_THREADS: ${STOCKFISH_THREADS:-1}
+      STOCKFISH_HASH_MB: ${STOCKFISH_HASH_MB:-128}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  pgdata:

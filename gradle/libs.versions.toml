@@ -1,0 +1,46 @@
+[versions]
+project = "1.0-SNAPSHOT"
+junitJupiterVersion = "5.9.1"
+java-toolchain = "25"
+java-target = "17"
+kotlin = "2.2.20"
+kotlin-language = "2.0"
+exposed = "0.52.0"
+koin = "4.1.1"
+serialization = "1.7.1"
+shadow = "9.2.2"
+vertx = "5.1.6"
+postgres = "42.7.4"
+rabbitmq = "5.22.0"
+exposed-jdbc = "0.52.0"
+netty = "4.2.17.Final"
+
+[libraries]
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-serialization-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+shadow-gradle-plugin = { module = "com.gradleup.shadow:shadow-gradle-plugin", version.ref = "shadow" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time", version.ref = "exposed" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed-jdbc" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres" }
+rabbitmq = { module = "com.rabbitmq:amqp-client", version.ref = "rabbitmq" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+vertx-stack-depchain = { module = "io.vertx:vertx-stack-depchain", version.ref = "vertx" }
+vertx-launcher-application = { module = "io.vertx:vertx-launcher-application"}
+vertx-auth-jwt = { module = "io.vertx:vertx-auth-jwt" }
+vertx-web = { module = "io.vertx:vertx-web"}
+vertx-pg-client = { module = "io.vertx:vertx-pg-client" }
+vertx-lang-kotlin-coroutines = { module ="io.vertx:vertx-lang-kotlin-coroutines"}
+vertx-lang-kotlin = { module ="io.vertx:vertx-lang-kotlin"}
+vertx-junit5 = { module ="io.vertx:vertx-junit5"}
+junit-jupiter = { module ="org.junit.jupiter:junit-jupiter", version.ref = "junitJupiterVersion"}
+junit-platform-launcher = { module ="org.junit.platform:junit-platform-launcher"}
+testcontainers = { module = "org.testcontainers:junit-jupiter", version = "1.20.6" }
+testcontainers-postgres = { module = "org.testcontainers:postgresql", version = "1.20.6" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
