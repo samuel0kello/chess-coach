@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.javatime.timestamp
 
 object Games : IdTable<String>("games") {
-    override val id: Column<EntityID<String>> = varchar("game_id", 128).entityId()
+    override val id: Column<EntityID<String>> = varchar("game_id", 256).entityId() // Increased from 128 to 256 for full URLs
     val chessAccountId = reference("chess_account_id", ChessAccounts)
     val pgn = text("pgn")
     val playedAsWhite = bool("played_as_white")
