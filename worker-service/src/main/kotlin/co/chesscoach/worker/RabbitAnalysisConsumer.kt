@@ -1,9 +1,12 @@
 package co.chesscoach.worker
 
-import com.rabbitmq.client.*
+import com.rabbitmq.client.AMQP
+import com.rabbitmq.client.Connection
+import com.rabbitmq.client.ConnectionFactory
+import com.rabbitmq.client.DefaultConsumer
+import com.rabbitmq.client.Envelope
 import kotlinx.serialization.json.Json
 import messaging.AnalysisJob
-import java.net.InetAddress
 
 class RabbitAnalysisConsumer(
     private val worker: StockfishAnalysisService,
@@ -51,26 +54,32 @@ class RabbitAnalysisConsumer(
     }
 
     private fun connectWithRetry(): Connection {
-        val factory =
-            ConnectionFactory().apply {
-                this.host = host
-                this.port = port
-                this.username = user
-                this.password = password
-                this.virtualHost = "/"
-                connectionTimeout = 10_000
-            }
+        // Give RabbitMQ extra time to be fully ready after health check passes
+        println("[worker] waiting 5 seconds for RabbitMQ to be fully ready...")
+        Thread.sleep(5_000)
+
+        // Use AMQP URI format for simpler connection configuration
+        val uri = "amqp://$user:$password@$host:$port/%2F"
+        println("[worker] connecting via AMQP URI: amqp://$user:****@$host:$port/%2F")
+
+        val factory = ConnectionFactory()
+        factory.setUri(uri)
+        factory.connectionTimeout = 30_000
+        factory.requestedHeartbeat = 30
+        factory.isAutomaticRecoveryEnabled = true
+        factory.networkRecoveryInterval = 10_000
+
         var lastError: Exception? = null
         repeat(15) { attempt ->
             try {
                 println(
-                    "[worker] connecting rabbitmq host=$host resolved=${InetAddress.getAllByName(host).joinToString()} " +
-                        "port=$port user=$user attempt=${attempt + 1}/15",
+                    "[worker] connecting rabbitmq host=$host port=$port user=$user attempt=${attempt + 1}/15",
                 )
                 return factory.newConnection()
             } catch (error: Exception) {
                 lastError = error
                 println("[worker] rabbitmq connection failed type=${error::class.simpleName} message=${error.message}")
+                error.printStackTrace()
                 if (attempt < 14) Thread.sleep(2_000)
             }
         }

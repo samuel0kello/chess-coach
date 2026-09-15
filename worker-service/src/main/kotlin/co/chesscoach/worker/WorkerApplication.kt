@@ -1,27 +1,39 @@
 package co.chesscoach.worker
 
+import co.chesscoach.worker.chess.MoveQualityClassifier
+import co.chesscoach.worker.chess.PgnParser
 import co.chesscoach.worker.engine.ChessEngine
 import co.chesscoach.worker.engine.StockfishConfig
 import co.chesscoach.worker.engine.StockfishEngine
-import messaging.AnalysisJobPublisher
-import messaging.RabbitAnalysisJobPublisher
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
-import persistence.*
-import schema.*
+import persistence.DatabaseConfig
+import persistence.ExposedAnalysisJobRepository
+import persistence.ExposedAnalysisRepository
+import persistence.ExposedGameRepository
+import schema.AnalysisJobs
+import schema.ChessAccounts
+import schema.Games
+import schema.MoveEvaluations
+import schema.Puzzles
+import schema.Users
 
 private val workerModule =
     module {
-        single<AnalysisJobPublisher> { RabbitAnalysisJobPublisher() }
         single { StockfishConfig() }
         single<ChessEngine> { StockfishEngine(get()) }
         single { AnalysisWorker(get(), get()) }
         single { DatabaseConfig().connect() }
         single<domain.AnalysisRepository> { ExposedAnalysisRepository() }
-        single { StockfishAnalysisService(get(), get()) }
+        single<domain.GameRepository> { ExposedGameRepository() }
+        single<domain.AnalysisJobRepository> { ExposedAnalysisJobRepository() }
+        single { PgnParser() }
+        single { MoveQualityClassifier() }
+        single { MoveByMoveAnalyzer(get(), get(), get(), get()) }
+        single { StockfishAnalysisService(get(), get(), get()) }
     }
 
 fun main() {
@@ -32,7 +44,7 @@ fun main() {
 
     val database = koin.koin.get<org.jetbrains.exposed.sql.Database>()
     transaction(database) {
-        SchemaUtils.create(Users, ChessAccounts, Games, MoveEvaluations, Puzzles)
+        SchemaUtils.create(Users, ChessAccounts, Games, MoveEvaluations, Puzzles, AnalysisJobs)
         exec("ALTER TABLE games ALTER COLUMN opening_eco TYPE varchar(255)")
     }
     val consumer = RabbitAnalysisConsumer(koin.koin.get())
@@ -45,7 +57,6 @@ fun main() {
         Thread {
             consumer.close()
             koin.koin.get<ChessEngine>().close()
-            (koin.koin.get<AnalysisJobPublisher>() as? AutoCloseable)?.close()
             koin.close()
             stopKoin()
         },
