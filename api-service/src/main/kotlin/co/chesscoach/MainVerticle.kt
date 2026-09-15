@@ -1,6 +1,14 @@
 package co.chesscoach
 
-import domain.*
+import domain.AnalysisJobRepository
+import domain.AnalysisRepository
+import domain.ChessAccount
+import domain.ChessAccountRepository
+import domain.Game
+import domain.GameRepository
+import domain.PuzzleRepository
+import domain.UserAccount
+import domain.UserRepository
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
@@ -23,8 +31,19 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
-import persistence.*
-import schema.*
+import persistence.DatabaseConfig
+import persistence.ExposedAnalysisJobRepository
+import persistence.ExposedAnalysisRepository
+import persistence.ExposedChessAccountRepository
+import persistence.ExposedGameRepository
+import persistence.ExposedPuzzleRepository
+import persistence.ExposedUserRepository
+import schema.AnalysisJobs
+import schema.ChessAccounts
+import schema.Games
+import schema.MoveEvaluations
+import schema.Puzzles
+import schema.Users
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
@@ -39,7 +58,7 @@ class MainVerticle : AbstractVerticle() {
             config = ApiConfig()
             val database = DatabaseConfig().connect()
             transaction(database) {
-                SchemaUtils.create(Users, ChessAccounts, Games, MoveEvaluations, Puzzles)
+                SchemaUtils.create(Users, ChessAccounts, Games, MoveEvaluations, Puzzles, AnalysisJobs)
                 exec("ALTER TABLE games ALTER COLUMN opening_eco TYPE varchar(255)")
             }
             koin = startKoin { modules(apiModule(database)) }
@@ -121,7 +140,32 @@ class MainVerticle : AbstractVerticle() {
                             }
                     }
                     get("/analysis/:gameId").handler(JWTAuthHandler.create(jwt)).handler { ctx ->
-                        ctx.jsonEncoded(koin.koin.get<AnalysisRepository>().findByGame(ctx.pathParam("gameId")))
+                        val gameId = ctx.pathParam("gameId")
+                        val normalizedGameId = koin.koin.get<GameRepository>().normalizeGameId(gameId)
+                        ctx.jsonEncoded(koin.koin.get<AnalysisRepository>().findByGame(normalizedGameId))
+                    }
+                    get("/analysis/:gameId/status").handler(JWTAuthHandler.create(jwt)).handler { ctx ->
+                        val gameId = ctx.pathParam("gameId")
+                        val normalizedGameId = koin.koin.get<GameRepository>().normalizeGameId(gameId)
+                        koin.koin.get<AnalysisJobRepository>().getJobStatus(normalizedGameId)?.let { status ->
+                            ctx.jsonEncoded(status)
+                        } ?: run {
+                            ctx.response().setStatusCode(404).end(JsonObject().put("error", "analysis job not found").encode())
+                        }
+                    }
+                    get("/analysis/:gameId/moves").handler(JWTAuthHandler.create(jwt)).handler { ctx ->
+                        val gameId = ctx.pathParam("gameId")
+                        val normalizedGameId = koin.koin.get<GameRepository>().normalizeGameId(gameId)
+                        ctx.jsonEncoded(koin.koin.get<AnalysisRepository>().findMoveAnalysis(normalizedGameId))
+                    }
+                    get("/analysis/:gameId/summary").handler(JWTAuthHandler.create(jwt)).handler { ctx ->
+                        val gameId = ctx.pathParam("gameId")
+                        val normalizedGameId = koin.koin.get<GameRepository>().normalizeGameId(gameId)
+                        koin.koin.get<AnalysisRepository>().findGameSummary(normalizedGameId)?.let { summary ->
+                            ctx.jsonEncoded(summary)
+                        } ?: run {
+                            ctx.response().setStatusCode(404).end(JsonObject().put("error", "analysis summary not found").encode())
+                        }
                     }
                     post("/analysis/:gameId").handler(JWTAuthHandler.create(jwt)).handler(::requestAnalysis)
                     get("/puzzles").handler(JWTAuthHandler.create(jwt)).handler {
@@ -193,6 +237,10 @@ class MainVerticle : AbstractVerticle() {
 
     private fun requestAnalysis(ctx: io.vertx.ext.web.RoutingContext) {
         val gameId = ctx.pathParam("gameId")
+
+        // Normalize game ID (convert numeric ID to full URL when needed)
+        val normalizedGameId = koin.koin.get<GameRepository>().normalizeGameId(gameId)
+
         val tier =
             when (ctx.bodyOrNull()?.getString("tier", "FAST")?.uppercase()) {
                 "FAST" -> {
@@ -208,24 +256,28 @@ class MainVerticle : AbstractVerticle() {
                     return
                 }
             }
-        if (koin.koin.get<GameRepository>().find(gameId) == null) {
+        if (koin.koin.get<GameRepository>().find(normalizedGameId) == null) {
             writeError(ctx, 404, "game not found")
             return
         }
-        println("[api] POST /analysis/$gameId tier=$tier")
+
+        // Create analysis job entry for tracking
+        val jobId = koin.koin.get<AnalysisJobRepository>().createJob(normalizedGameId, tier)
+
+        println("[api] POST /analysis/$normalizedGameId tier=$tier jobId=$jobId")
         vertx
             .executeBlocking {
                 runBlocking {
                     if (tier == "DEEP") {
-                        koin.koin.get<AnalysisJobPublisher>().publishDeepAnalysis(gameId)
+                        koin.koin.get<AnalysisJobPublisher>().publishDeepAnalysis(normalizedGameId)
                     } else {
-                        koin.koin.get<AnalysisJobPublisher>().publishFastAnalysis(gameId)
+                        koin.koin.get<AnalysisJobPublisher>().publishFastAnalysis(normalizedGameId)
                     }
                 }
             }.onSuccess {
                 ctx.response().setStatusCode(202).end(
                     JsonObject()
-                        .put("gameId", gameId)
+                        .put("gameId", normalizedGameId)
                         .put("tier", tier)
                         .put("status", "queued")
                         .encode(),
@@ -248,7 +300,7 @@ class MainVerticle : AbstractVerticle() {
     ) : RuntimeException(cause)
 
     private fun writeError(
-        ctx: io.vertx.ext.web.RoutingContext,
+        ctx: RoutingContext,
         status: Int,
         message: String,
         cause: Throwable? = null,
@@ -264,7 +316,7 @@ class MainVerticle : AbstractVerticle() {
             .end(body.encode())
     }
 
-    private fun register(ctx: io.vertx.ext.web.RoutingContext) {
+    private fun register(ctx: RoutingContext) {
         val body = ctx.bodyOrNull()
         val email = body?.getString("email")?.trim()?.lowercase()
         val password = body?.getString("password")
@@ -330,6 +382,7 @@ private fun apiModule(database: org.jetbrains.exposed.sql.Database) =
         single { database }
         single<GameRepository> { ExposedGameRepository() }
         single<AnalysisRepository> { ExposedAnalysisRepository() }
+        single<AnalysisJobRepository> { ExposedAnalysisJobRepository() }
         single<PuzzleRepository> { ExposedPuzzleRepository() }
         single<UserRepository> { ExposedUserRepository() }
         single<ChessAccountRepository> { ExposedChessAccountRepository() }
