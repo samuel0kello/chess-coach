@@ -8,6 +8,11 @@ application {
     mainClass.set("co.chesscoach.worker.WorkerApplicationKt")
 }
 
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+
 dependencies {
     implementation(project(":domain"))
 }
