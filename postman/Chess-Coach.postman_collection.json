@@ -2,11 +2,12 @@
   "info": {
     "name": "Chess Coach API",
     "_postman_id": "b1f4f3d8-8a7c-4b77-9b2c-4d38e3b42d10",
-    "description": "Local API collection for authentication, Chess.com game sync, game retrieval, analysis lookup, and puzzles.",
+    "description": "Local API collection for authentication, Chess.com game sync, game retrieval, analysis lookup with real-time WebSocket updates, and puzzles.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {"key": "baseUrl", "value": "http://localhost:8080"},
+    {"key": "wsUrl", "value": "ws://localhost:8080"},
     {"key": "email", "value": "user@example.com"},
     {"key": "password", "value": "change-me-123"},
     {"key": "chessComUsername", "value": "your-chess-com-username"},
@@ -109,6 +110,33 @@
       }
     },
     {
+      "name": "Get analysis status",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/analysis/{{gameId}}/status",
+        "description": "Returns analysis job status with progress tracking. Use tier-based adaptive polling: FAST tier polls at 15s, 30s, 60s, 120s; DEEP tier polls at 30s, 60s, 120s, 240s. Response includes status (queued/running/completed/failed), progress (0-100), movesAnalyzed, and totalMoves."
+      }
+    },
+    {
+      "name": "Get move-by-move analysis",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/analysis/{{gameId}}/moves",
+        "description": "Returns detailed move-by-move analysis with move quality classification (brilliant, mistake, blunder, etc.), evaluations before/after each move, best moves, and principal variations. Chess.com-like analysis data for frontend display."
+      }
+    },
+    {
+      "name": "Get game analysis summary",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+        "url": "{{baseUrl}}/analysis/{{gameId}}/summary",
+        "description": "Returns overall game analysis summary including accuracy percentage, move quality breakdown (best moves, mistakes, blunders), average centipawn loss, and phase-specific statistics (opening, middlegame, endgame)."
+      }
+    },
+    {
       "name": "Queue fast game review",
       "request": {
         "method": "POST",
@@ -138,6 +166,17 @@
           "options": {"raw": {"language": "json"}}
         },
         "url": "{{baseUrl}}/analysis/{{gameId}}"
+      }
+    },
+    {
+      "name": "WebSocket Analysis Updates",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "url": "ws://localhost:8080/ws/analysis/{{gameId}}?token={{token}}",
+        "description": "Real-time WebSocket connection for analysis status updates. Connects to receive live progress updates when analysis is queued and completed. Message format: {\"gameId\":\"123\",\"status\":\"queued|completed\",\"progress\":10,\"timestamp\":1234567890}. Testing: Use browser console: const ws = new WebSocket('ws://localhost:8080/ws/analysis/{gameId}?token={token}'); ws.onmessage = (e) => console.log(JSON.parse(e.data));"
       }
     },
     {

@@ -83,152 +83,267 @@ application code remains MIT-licensed. See
 [`third-party/stockfish/SOURCE-OFFER.txt`](third-party/stockfish/SOURCE-OFFER.txt)
 for source and license details.
 
-## Requirements
+## Prerequisites
 
-- JDK 17 or newer
-- Gradle wrapper (`./gradlew`)
+### System Requirements
+- JDK 17 or newer (Java 25 toolchain used for Gradle, Java 17 bytecode target)
 - Docker and Docker Compose for local infrastructure
-- Stockfish executable for local worker execution
+- Stockfish executable for local worker execution (development only)
 
-The project uses a Java 25 toolchain for Gradle toolchain selection and targets
-Java 17 bytecode for compatibility.
+### Project Setup
+```bash
+# Clone the repository
+git clone <repository-url>
+cd chess_coach_backend
 
-## Configuration
+# Verify Gradle wrapper
+./gradlew --version
+```
 
-Copy the example environment file when running the API and worker locally:
+## Environment Configuration
+
+The project supports multiple deployment environments through environment variables
+and Docker Compose profiles.
+
+### Environment Files
+
+Copy the example environment file to customize settings:
 
 ```bash
 cp .env.example .env
 ```
 
-The development Compose file contains the same safe local-only defaults, so
-this also works without creating `.env`:
+### Environment Variables
 
+#### Required for All Environments
+| Variable | Purpose | Development Default | Production Requirement |
+|---|---|---|---|
+| `APP_ENV` | Runtime environment | `dev` | `prod` |
+| `API_HOST` | API bind host | `0.0.0.0` | `0.0.0.0` or specific interface |
+| `API_PORT` | API port | `8080` | Configured by deployment |
+
+#### Security (Production Only)
+| Variable | Purpose | Development Default | Production Requirement |
+|---|---|---|---|
+| `JWT_SECRET` | JWT signing secret | `chesscoach-development-jwt-secret-change-for-production` | Random 48+ characters |
+| `DATABASE_PASSWORD` | PostgreSQL password | `chesscoach-dev-password` | Random 32+ characters |
+| `RABBITMQ_PASSWORD` | RabbitMQ password | `rabbitmq-dev-password` | Random 32+ characters |
+
+#### Database Configuration
+| Variable | Purpose | Development Default | Production Default |
+|---|---|---|---|
+| `DATABASE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/chesscoach` | `jdbc:postgresql://postgres:5432/chesscoach` (Docker) |
+| `DATABASE_USER` | PostgreSQL user | `chesscoach` | `chesscoach` |
+| `POSTGRES_DB` | PostgreSQL database name | `chesscoach` | `chesscoach` |
+| `POSTGRES_PORT` | PostgreSQL port | `5432` | `5432` |
+
+#### RabbitMQ Configuration
+| Variable | Purpose | Development Default | Production Default |
+|---|---|---|---|
+| `RABBITMQ_HOST` | RabbitMQ host | `localhost` | `rabbitmq` (Docker) |
+| `RABBITMQ_WORKER_HOST` | Worker-specific RabbitMQ host | `rabbitmq` | `rabbitmq` |
+| `RABBITMQ_PORT` | RabbitMQ port | `5672` | `5672` |
+| `RABBITMQ_MANAGEMENT_PORT` | RabbitMQ management UI port | `15672` | `15672` |
+| `RABBITMQ_USER` | RabbitMQ user | `chesscoach` | `chesscoach` |
+| `RABBITMQ_QUEUE` | Analysis queue name | `analysis.jobs` | `analysis.jobs` |
+
+#### Stockfish Configuration
+| Variable | Purpose | Development Default | Production Default |
+|---|---|---|---|
+| `STOCKFISH_PATH` | Stockfish executable path | `stockfish` (local) | `/opt/stockfish/stockfish` (Docker) |
+| `STOCKFISH_FAST_DEPTH` | Fast analysis depth | `12` | `12` |
+| `STOCKFISH_DEEP_DEPTH` | Deep analysis depth | `20` | `20` |
+| `STOCKFISH_THREADS` | Stockfish thread count | `1` | `1` |
+| `STOCKFISH_HASH_MB` | Stockfish hash size (MB) | `128` | `128` |
+| `STOCKFISH_SOURCE_URL` | Stockfish source archive URL | GitHub SF 17.1 | GitHub SF 17.1 |
+| `STOCKFISH_SOURCE_SHA256` | Stockfish source SHA-256 | Verified digest | Verified digest |
+
+## Development Setup
+
+### Option 1: Local Services with Local Applications
+
+This setup runs all services locally on your machine for maximum debugging capability.
+
+#### Step 1: Install and Configure Infrastructure
 ```bash
+# Start PostgreSQL and RabbitMQ using Docker Compose
 docker compose --profile dev up -d
+
+# Verify services are running
+docker compose ps
 ```
 
-If you want Compose to load the example file explicitly, use:
-
+#### Step 2: Install Stockfish
 ```bash
-docker compose --env-file .env.example --profile dev up -d
+# Download Stockfish from official site
+# https://stockfishchess.org/download/
+
+# Extract and make executable
+chmod +x stockfish
+
+# Add to PATH or set environment variable
+export STOCKFISH_PATH=/path/to/stockfish
 ```
 
-Update the values as needed. Important settings include:
-
-| Variable | Purpose | Development default |
-|---|---|---|
-| `APP_ENV` | Runtime environment | `dev` |
-| `API_HOST` | API bind host | `0.0.0.0` |
-| `API_PORT` | API port | `8080` |
-| `JWT_SECRET` | JWT signing secret | Replace before use |
-| `DATABASE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/chesscoach` |
-| `DATABASE_USER` | PostgreSQL user | `chesscoach` |
-| `DATABASE_PASSWORD` | PostgreSQL password | Replace before use |
-| `RABBITMQ_HOST` | RabbitMQ host | `localhost` |
-| `RABBITMQ_PORT` | RabbitMQ port | `5672` |
-| `RABBITMQ_QUEUE` | Analysis queue | `analysis.jobs` |
-| `STOCKFISH_PATH` | Stockfish executable path | `stockfish` |
-| `STOCKFISH_FAST_DEPTH` | Fast analysis depth | `12` |
-| `STOCKFISH_DEEP_DEPTH` | Deep analysis depth | `20` |
-| `STOCKFISH_THREADS` | Stockfish thread count | `1` |
-| `STOCKFISH_HASH_MB` | Stockfish hash size | `128` |
-
-Production requires `APP_ENV=prod`, explicit database and RabbitMQ passwords,
-and a non-default JWT secret of at least 32 characters. Never use the
-development defaults in production.
-
-## Run in development
-
-Start PostgreSQL and RabbitMQ:
-
+#### Step 3: Start Application Services
 ```bash
-docker compose --profile dev up -d
-```
-
-Install Stockfish from the official download page:
-
-<https://stockfishchess.org/download/>
-
-Then either put the executable on `PATH` or configure it explicitly:
-
-```bash
-export STOCKFISH_PATH=/absolute/path/to/stockfish
-```
-
-Start the API:
-
-```bash
+# Start API service (terminal 1)
 ./gradlew :api-service:run
-```
 
-Start the worker in another terminal:
-
-```bash
+# Start worker service (terminal 2)
 ./gradlew :worker-service:run
-```
 
-Start the poller in another terminal:
-
-```bash
+# Start poller service (terminal 3) - optional
 ./gradlew :poller-service:run
 ```
 
-The development Compose profile does not build the production worker image, so
-the worker can use a locally installed Stockfish executable.
+#### Step 4: Verify Setup
+```bash
+# Test API health
+curl http://localhost:8080/health
 
-The API is available at:
-
-```text
-http://localhost:8080
+# Check service logs
+docker compose logs -f
 ```
 
-Stop development infrastructure with:
+### Option 2: Docker Compose with Local Applications
 
+This setup uses Docker for infrastructure but runs applications locally.
+
+#### Step 1: Start Infrastructure
 ```bash
+# Use .env.example for configuration
+docker compose --env-file .env.example --profile dev up -d
+```
+
+#### Step 2: Configure Environment
+```bash
+# Set environment variables for local services
+export DATABASE_URL=jdbc:postgresql://localhost:5432/chesscoach
+export RABBITMQ_HOST=localhost
+export STOCKFISH_PATH=/path/to/stockfish
+```
+
+#### Step 3: Start Applications
+```bash
+# Start services as in Option 1
+./gradlew :api-service:run
+./gradlew :worker-service:run
+```
+
+### Option 3: Full Docker Compose Development
+
+This setup runs everything in Docker containers for consistency.
+
+#### Step 1: Build and Start All Services
+```bash
+# Build and start all services including worker image
+docker compose --profile dev up -d --build
+```
+
+#### Step 2: Verify Services
+```bash
+# Check all services are healthy
+docker compose ps
+
+# View logs
+docker compose logs -f worker
+docker compose logs -f api-service
+```
+
+#### Access Points
+- API: `http://localhost:8080`
+- RabbitMQ Management: `http://localhost:15672` (user: `chesscoach`, password: `rabbitmq-dev-password`)
+- PostgreSQL: `localhost:5432`
+
+### Stop Development Environment
+```bash
+# Stop services
 docker compose --profile dev down
+
+# Remove volumes and data
+docker compose --profile dev down -v
 ```
 
-Add `-v` to remove the PostgreSQL volume and its data.
+## Production Setup
 
-## Run in production
+### Security Configuration
 
-Use strong, externally managed credentials in production:
+Generate secure credentials before deployment:
 
 ```bash
-export APP_ENV=prod
+# Generate secure secrets
 export JWT_SECRET="$(openssl rand -base64 48)"
 export POSTGRES_PASSWORD="$(openssl rand -base64 32)"
 export RABBITMQ_PASSWORD="$(openssl rand -base64 32)"
+
+# Export Stockfish configuration
 export STOCKFISH_SOURCE_URL="https://github.com/official-stockfish/Stockfish/archive/refs/tags/sf_17.1.tar.gz"
 export STOCKFISH_SOURCE_SHA256="0cfd9396438798cc68f5c0d5fa0bb458bb8ffff7de06add841aaeace86bec1f1"
 ```
 
-Start the production dependencies:
+### Docker Compose Production Deployment
 
+#### Step 1: Deploy Infrastructure
 ```bash
+# Start production dependencies
 docker compose -f docker-compose.prod.yml up -d
+
+# Verify health
+docker compose -f docker-compose.prod.yml ps
 ```
 
-The production worker image contains Stockfish at
-`/opt/stockfish/stockfish`. Build a multi-platform image with
-`docker buildx build --platform linux/amd64,linux/arm64`, supplying a verified
-source URL and SHA-256 digest.
+#### Step 2: Deploy Application Services
+For production, deploy services in managed containers or under a process supervisor:
+- Kubernetes
+- Docker Swarm
+- Systemd services
+- Cloud platform services
 
-For production deployments, run the services in managed containers or under a
-process supervisor and provide the environment variables through the platform's
-secret-management system. Do not commit `.env` files or credentials.
+Provide environment variables through the platform's secret management system.
 
-## API
+### Multi-Platform Worker Image
 
-### Health check
+Build multi-platform worker images for different architectures:
 
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --build-arg STOCKFISH_SOURCE_URL="$STOCKFISH_SOURCE_URL" \
+  --build-arg STOCKFISH_SOURCE_SHA256="$STOCKFISH_SOURCE_SHA256" \
+  -t your-registry/chess-coach-worker:latest \
+  --push .
+```
+
+### Production Considerations
+
+**Security:**
+- Never use development defaults in production
+- Use strong, randomly generated passwords
+- Rotate credentials regularly
+- Enable TLS for database and RabbitMQ connections
+- Use secret management systems (HashiCorp Vault, AWS Secrets Manager, etc.)
+
+**Monitoring:**
+- Enable health checks for all services
+- Set up logging aggregation
+- Monitor RabbitMQ queue depths
+- Track worker processing times
+- Set up alerts for connection failures
+
+**Scaling:**
+- Scale API services horizontally
+- Run multiple worker instances based on queue depth
+- Use connection pooling for database access
+- Configure appropriate resource limits
+
+## API Documentation
+
+### Health Check
 ```http
 GET /health
 ```
 
-### Register
-
+### Authentication
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -238,8 +353,6 @@ Content-Type: application/json
   "password": "change-me-123"
 }
 ```
-
-### Get a token
 
 ```http
 POST /auth/token
@@ -251,70 +364,167 @@ Content-Type: application/json
 }
 ```
 
-Use the returned token for protected endpoints:
+### Protected Endpoints
+Use the returned JWT token with the `Authorization: Bearer <token>` header:
 
-```http
-Authorization: Bearer <jwt-token>
-```
+- `GET /games` - List all games
+- `GET /games/:id` - Get specific game
+- `GET /games/by-url?url=<encoded-url>` - Get game by Chess.com URL
+- `POST /analysis/:gameId` - Queue game analysis
+- `GET /analysis/:gameId` - Get game analysis results
+- `GET /puzzles` - Get tactical puzzles
 
-Available protected endpoints include:
+### Postman Collection
+Import `postman/Chess-Coach.postman_collection.json` for a ready-made request collection:
+1. Set collection variables
+2. Run `Token` request first (saves JWT to `token` variable)
+3. Run `Sync Chess.com games` to fetch games
+4. Run `List games` to see available games
+5. Use `Get game by ID` or `Get game by Chess.com URL` for specific games
+6. Run `Queue fast game review` or `Queue deep game review` to start analysis
+7. Poll `Get game analysis` to check results
 
-- `GET /games`
-- `GET /games/:id`
-- `GET /games/by-url?url=<encoded-chess-com-url>`
-- `POST /analysis/:gameId`
-- `GET /analysis/:gameId`
-- `GET /puzzles`
+For detailed API documentation, see [`API.md`](API.md).
+For observability and debugging, see [`OBSERVABILITY.md`](OBSERVABILITY.md).
 
-Import `postman/Chess-Coach.postman_collection.json` into Postman for a
-ready-made request collection. Set the collection variables, run `Token`
-first, and its test script will save the JWT to the `token` variable. Then run
-`Sync Chess.com games` followed by `List games`. Use `Get game by ID` with an
-ID from the list response, or `Get game by Chess.com URL` for full Chess.com
-URLs. To start a review, run `Queue fast game review` or `Queue deep game
-review`, then poll `Get game analysis` after the worker completes. Start the
-development worker with:
+## Troubleshooting
 
+### RabbitMQ Connection Issues
+
+**Problem:** Worker cannot connect to RabbitMQ with "Connection refused" errors.
+
+**Solution:** The RabbitMQ Java client uses AMQP URI format for reliable connections in Docker environments. The current implementation uses `amqp://user:password@host:port/%2F` format where `%2F` is the URL-encoded default virtual host.
+
+**Verification:**
 ```bash
-docker compose --env-file .env.example --profile dev up -d --build
+# Check RabbitMQ is running
+docker compose ps rabbitmq
+
+# Check RabbitMQ logs
+docker compose logs rabbitmq
+
+# Test connection from worker container
+docker exec chess_coach_backend-worker-1 timeout 5 bash -c 'cat < /dev/null > /dev/tcp/rabbitmq/5672'
 ```
 
-More endpoint details are available in [`API.md`](API.md).
+### Database Connection Issues
 
-For request tracing and Docker log commands, see
-[`OBSERVABILITY.md`](OBSERVABILITY.md).
+**Problem:** Services cannot connect to PostgreSQL.
+
+**Solution:** Verify database host configuration:
+- Local development: `localhost` or `127.0.0.1`
+- Docker development: `postgres` (service name)
+- Production: Use database service hostname or IP
+
+**Verification:**
+```bash
+# Check PostgreSQL is running
+docker compose ps postgres
+
+# Test database connection
+docker exec chess_coach_backend-postgres-1 pg_isready -U chesscoach
+```
+
+### Stockfish Issues
+
+**Problem:** Worker cannot find or execute Stockfish.
+
+**Solution:** Verify Stockfish path configuration:
+- Local development: Set `STOCKFISH_PATH` to local executable
+- Docker: Stockfish is built into worker image at `/opt/stockfish/stockfish`
+
+**Verification:**
+```bash
+# Local: Test Stockfish directly
+./stockfish version
+
+# Docker: Check Stockfish in container
+docker exec chess_coach_backend-worker-1 /opt/stockfish/stockfish version
+```
+
+### Service Health Check Failures
+
+**Problem:** Services show as unhealthy in Docker Compose.
+
+**Solution:** Check service logs for specific errors:
+```bash
+docker compose logs -f [service-name]
+```
+
+Common issues:
+- Database not ready when service starts (increase health check timeouts)
+- Environment variables not properly set
+- Port conflicts with other services
+
+### Port Conflicts
+
+**Problem:** Services fail to start due to port conflicts.
+
+**Solution:** Modify port mappings in `.env` file:
+```bash
+API_PORT=8081
+POSTGRES_PORT=5433
+RABBITMQ_PORT=5673
+RABBITMQ_MANAGEMENT_PORT=15673
+```
 
 ## Testing
 
-Run the complete unit and module test suite:
-
+### Unit Tests
 ```bash
 ./gradlew clean test
 ```
 
-Run a complete build:
+### Integration Tests
+```bash
+# Run integration tests (requires Docker)
+RUN_INTEGRATION_TESTS=true ./gradlew test
+```
 
+### Full Build
 ```bash
 ./gradlew clean build
 ```
 
-PostgreSQL integration tests can be enabled when Docker is available:
+## Database Migrations
 
-```bash
-RUN_INTEGRATION_TESTS=true ./gradlew test
-```
-
-## Database migrations
-
-The initial SQL migration is located at:
-
+### Development
+The development Compose setup automatically runs migrations on PostgreSQL startup:
 ```text
 domain/src/main/resources/db/migration/V1__baseline.sql
 ```
 
-The development Compose setup mounts migration resources into PostgreSQL's
-initialization directory. Production deployments should run migrations as an
-explicit release step before starting application instances.
+### Production
+Production deployments should run migrations as an explicit release step:
+1. Run migrations before deploying new application version
+2. Verify migration success
+3. Deploy application instances
+4. Monitor for migration-related issues
+
+## Monitoring and Observability
+
+### Health Checks
+All services expose health endpoints:
+- API: `GET /health`
+- Worker: Check process status and RabbitMQ connection
+- Poller: Check process status and RabbitMQ connection
+
+### Logs
+View service logs with Docker Compose:
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f worker
+docker compose logs -f api-service
+```
+
+### RabbitMQ Management UI
+Access the RabbitMQ management interface:
+- URL: `http://localhost:15672`
+- Default credentials: `chesscoach` / `rabbitmq-dev-password` (development)
+- Monitor queue depths, connection rates, and consumer activity
 
 ## License
 

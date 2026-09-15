@@ -19,7 +19,6 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-chesscoach}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq-dev-password}
-      RABBITMQ_NODE_IP_ADDRESS: 0.0.0.0
     ports: ["${RABBITMQ_PORT:-5672}:5672", "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -35,6 +34,7 @@ services:
         STOCKFISH_SOURCE_SHA256: ${STOCKFISH_SOURCE_SHA256:-0cfd9396438798cc68f5c0d5fa0bb458bb8ffff7de06add841aaeace86bec1f1}
     profiles: ["dev", "prod"]
     environment:
+      JAVA_OPTS: "-Djava.net.preferIPv4Stack=true"
       APP_ENV: ${APP_ENV:-prod}
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chesscoach}
       DATABASE_USER: ${POSTGRES_USER:-chesscoach}
