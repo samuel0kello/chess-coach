@@ -17,14 +17,13 @@ class RabbitAnalysisJobPublisher(
         println("[rabbitmq] connecting host=$host port=$port user=$user queue=$queue")
     }
 
+    // Use AMQP URI format for reliable connection (same fix as worker)
+    private val uri = "amqp://$user:$password@$host:$port/%2F"
     private val connection =
         ConnectionFactory()
             .apply {
-                this.host = host
-                this.port = port
-                this.username = user
-                this.password = password
-                this.connectionTimeout = 10_000
+                setUri(uri)
+                connectionTimeout = 10_000
             }.newConnection()
     private val channel =
         connection
