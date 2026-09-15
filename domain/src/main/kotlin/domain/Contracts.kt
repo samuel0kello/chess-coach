@@ -28,6 +28,82 @@ data class AnalysisResult(
 )
 
 @Serializable
+data class AnalysisJobStatus(
+    val gameId: String,
+    val status: String, // queued, running, completed, failed
+    val tier: String,
+    val progress: Int, // 0-100
+    val totalMoves: Int,
+    val movesAnalyzed: Int,
+    val createdAt: String,
+    val startedAt: String?,
+    val completedAt: String?,
+)
+
+@Serializable
+data class MoveAnalysis(
+    val gameId: String,
+    val ply: Int,
+    val sanMove: String,
+    val evaluationBefore: Int,
+    val evaluationAfter: Int,
+    val centipawnLoss: Int,
+    val bestMove: String,
+    val principalVariation: List<String>,
+    val moveQuality: MoveQuality,
+    val phase: GamePhase,
+    val analysisTier: String,
+    val timestamp: String = Instant.now().toString(),
+)
+
+@Serializable
+enum class MoveQuality {
+    BRILLIANT,
+    GREAT,
+    BEST,
+    EXCELLENT,
+    GOOD,
+    BOOK,
+    INACCURACY,
+    MISTAKE,
+    BLUNDER,
+    UNKNOWN,
+}
+
+@Serializable
+enum class GamePhase {
+    OPENING,
+    MIDDLEGAME,
+    ENDGAME,
+}
+
+@Serializable
+data class GameAnalysisSummary(
+    val gameId: String,
+    val totalMoves: Int,
+    val accuracy: Double,
+    val bestMoves: Int,
+    val excellentMoves: Int,
+    val goodMoves: Int,
+    val bookMoves: Int,
+    val inaccuracies: Int,
+    val mistakes: Int,
+    val blunders: Int,
+    val avgCentipawnLoss: Double,
+    val phaseAnalysis: Map<String, PhaseStats>,
+    val analysisTier: String,
+    val completedAt: String = Instant.now().toString(),
+)
+
+@Serializable
+data class PhaseStats(
+    val phase: GamePhase,
+    val moves: Int,
+    val accuracy: Double,
+    val avgCentipawnLoss: Double,
+)
+
+@Serializable
 data class Puzzle(
     val id: String,
     val gameId: String,
@@ -51,6 +127,8 @@ interface GameRepository {
     ): List<Game>
 
     fun save(game: Game)
+
+    fun normalizeGameId(id: String): String
 }
 
 data class ChessAccount(
@@ -69,7 +147,36 @@ interface ChessAccountRepository {
 interface AnalysisRepository {
     fun findByGame(gameId: String): List<AnalysisResult>
 
+    fun findMoveAnalysis(gameId: String): List<MoveAnalysis>
+
+    fun findGameSummary(gameId: String): GameAnalysisSummary?
+
     fun save(result: AnalysisResult)
+
+    fun saveMoveAnalysis(analysis: MoveAnalysis)
+
+    fun saveGameSummary(summary: GameAnalysisSummary)
+}
+
+interface AnalysisJobRepository {
+    fun createJob(
+        gameId: String,
+        tier: String,
+    ): String
+
+    fun updateJobProgress(
+        gameId: String,
+        progress: Int,
+        movesAnalyzed: Int,
+        totalMoves: Int,
+    )
+
+    fun updateJobStatus(
+        gameId: String,
+        status: String,
+    )
+
+    fun getJobStatus(gameId: String): AnalysisJobStatus?
 }
 
 interface PuzzleRepository {
